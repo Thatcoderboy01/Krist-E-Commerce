@@ -9,6 +9,8 @@ import  ShopListing  from './pages/ShopListing';
 import  Favorite  from './pages/Favourite';
 import  Cart  from './pages/Cart';
 import  ProductDetails  from './pages/ProductDetails';
+import { useDispatch, useSelector } from "react-redux";
+import ToastMessage from "./components/ToastMessage";
 
 
 const Container = styled.div`
@@ -23,12 +25,14 @@ const Container = styled.div`
   transition: all 0.2s ease;
 `;
 function App() {
+  const { currentUser } = useSelector((state) => state.user);
+  const { open, message, severity } = useSelector((state) => state.user);
   const [openAuth, setOpenAuth] = useState(false);
   return (
     <ThemeProvider theme={lightTheme}>
      <BrowserRouter>
      <Container>
-      <Navbar setOpenAuth={setOpenAuth} />
+      <Navbar setOpenAuth={setOpenAuth} currentUser={currentUser} />
       <Routes>
         <Route path="/" exact element={<Home />} />
         <Route path="/shop" exact element={<ShopListing />} />
@@ -37,6 +41,9 @@ function App() {
         <Route path="/shop/:id" exact element={<ProductDetails />} />
       </Routes>
       {openAuth && <Authentication openAuth={openAuth} setOpenAuth={setOpenAuth} />}
+      {open && (
+        <ToastMessage message={message} severity={severity}/>
+      )}
      </Container>
      </BrowserRouter>
     </ThemeProvider>

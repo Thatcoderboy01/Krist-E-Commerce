@@ -3,6 +3,7 @@ import ProductCard from '../components/Cards/ProductCard'
 import styled from "styled-components";
 import {filter} from "../utils/data";
 import { CircularProgress, Slider } from "@mui/material";
+import { getAllProducts } from "../api";
 
 const Container = styled.div`
   padding: 20px 30px;
@@ -90,40 +91,67 @@ const SelectableItem = styled.div`
 `;
 
 const ShopListing = () => {
-  const [priceRange, setPriceRange] = useState ([0, 1000]);
-    const [selectedSizes, setSelectedSizes] = useState(["S", "M", "L", "XL"]); // Default selected sizes
+  const [loading, setLoading] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [priceRange, setPriceRange] = useState([0, 1000]);
+  const [selectedSizes, setSelectedSizes] = useState(["S", "M", "L", "XL"]); // Default selected sizes
   const [selectedCategories, setSelectedCategories] = useState([
     "Men",
     "Women",
     "Kids",
     "Bags",
   ]); // Default selected categories
+
+  const getFilteredProductsData = async () => {
+    setLoading(true);
+    // Call the API function for filtered products
+    await getAllProducts(
+      `minPrice=${priceRange[0]}&maxPrice=${priceRange[1]}${
+        selectedSizes.length > 0 ? `&sizes=${selectedSizes.join(",")}` : ""
+      }${
+        selectedCategories.length > 0
+          ? `&categories=${selectedCategories.join(",")}`
+          : ""
+      }`
+    ).then((res) => {
+      setProducts(res.data);
+      setLoading(false);
+    });
+  };
+
+  useEffect(() => {
+    getFilteredProductsData();
+  }, [priceRange, selectedSizes, selectedCategories]);
   return (
     <Container>
-      <Filters>
-        <Menu>
-          {filter.map((filters) => (
-            <FilterSection>
-              <Title>{filters.name}</Title>
-              {filters.value === "price" ? (
-                <>
-                <Slider 
-                  aria-lebel="Price"
-                  defaultValue={priceRange}
-                  min={0}
-                  max={1000}
-                  valueLebelDisplay="auto"
-                  marks={[
-                    {value: 0, label: "$0"},
-                    {value: 1000, label: "$1000"},
-                  ]}
-                  onChange={(e, newValue)=> setPriceRange(newValue)}
-                />
-                </>
-              ): filters.value === "size" ? (
-                <Item>
-                  {filters.items.map((item) => (
-                    <SelectableItem
+      {loading ? (
+        <CircularProgress />
+      ) : (
+        <>
+          <Filters>
+            <Menu>
+              {filter.map((filters) => (
+                <FilterSection>
+                  <Title>{filters.name}</Title>
+                  {filters.value === "price" ? (
+                    <>
+                      <Slider
+                        aria-label="Price"
+                        defaultValue={priceRange}
+                        min={0}
+                        max={1000}
+                        valueLabelDisplay="auto"
+                        marks={[
+                          { value: 0, label: "$0" },
+                          { value: 1000, label: "$1000" },
+                        ]}
+                        onChange={(e, newValue) => setPriceRange(newValue)}
+                      />
+                    </>
+                  ) : filters.value === "size" ? (
+                    <Item>
+                      {filters.items.map((item) => (
+                        <SelectableItem
                           key={item}
                           selected={selectedSizes.includes(item)}
                           onClick={() =>
@@ -138,12 +166,12 @@ const ShopListing = () => {
                         >
                           {item}
                         </SelectableItem>
-                  ))}
-                </Item>
-              ): filters.value === "category" ? (
-                <Item>
-                  {filters.items.map((item) => (
-                    <SelectableItem
+                      ))}
+                    </Item>
+                  ) : filters.value === "category" ? (
+                    <Item>
+                      {filters.items.map((item) => (
+                        <SelectableItem
                           key={item}
                           selected={selectedCategories.includes(item)}
                           onClick={() =>
@@ -158,36 +186,24 @@ const ShopListing = () => {
                         >
                           {item}
                         </SelectableItem>
-                  ))}
-                </Item>
-              ) : null
-            }
-            </FilterSection>
-          ))}
-        </Menu>
-      </Filters>
-      <Products>
-        <CardWrapper>
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-        </CardWrapper>
-      </Products>
+                      ))}
+                    </Item>
+                  ) : null}
+                </FilterSection>
+              ))}
+            </Menu>
+          </Filters>
+          <Products>
+            <CardWrapper>
+              {products?.map((product) => (
+                <ProductCard key={product._id} product={product} />
+              ))}
+            </CardWrapper>
+          </Products>
+        </>
+      )}
     </Container>
-  )
-}
+  );
+};
 
 export default ShopListing;

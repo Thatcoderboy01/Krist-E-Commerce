@@ -1,7 +1,12 @@
-import React from 'react'
+import React, { useState } from 'react';
+import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import TextInput from "./TextInput";
 import Button from "./Button";
+import { UserSignIn } from "../api";
+import { useDispatch } from "react-redux";
+import { loginSuccess } from "../redux/reducers/userSlice";
+import { openSnackbar } from "../redux/reducers/snackbarSlice";
 
 const Container = styled.div`
   width: 100%;
@@ -33,7 +38,68 @@ const TextButton = styled.div`
   }
 `;
 
-const SignIn = () => {
+// Component
+const SignIn = ({ setOpenAuth }) => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const [buttonLoading, setButtonLoading] = useState(false);
+  const [buttonDisabled, setButtonDisabled] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const validateInputs = () => {
+    if (!email || !password) {
+      alert("Please fill in all fields");
+      return false;
+    }
+    return true;
+  };
+
+  const handelSignIn = async () => {
+    setButtonLoading(true);
+    setButtonDisabled(true);
+
+    if (validateInputs()) {
+      try {
+        const res = await UserSignIn({ email, password });
+        const token = res.data.token;
+
+        if (token) {
+          localStorage.setItem("krist-app-token", token);
+          dispatch(loginSuccess(res.data));
+          dispatch(
+            openSnackbar({
+              message: "Login Successful",
+              severity: "success",
+            })
+          );
+
+          // ✅ Close the modal
+          setOpenAuth(false);
+
+          // ✅ Redirect to Home page
+          navigate("/");
+        }
+      } catch (err) {
+        setButtonLoading(false);
+        setButtonDisabled(false);
+        const errorMessage = err.response?.data?.message || err.message;
+        alert(errorMessage);
+        dispatch(
+          openSnackbar({
+            message: errorMessage,
+            severity: "error",
+          })
+        );
+      }
+    }
+
+    setButtonDisabled(false);
+    setButtonLoading(false);
+  };
+
+
+
   return (
      <Container>
       <div>
@@ -44,23 +110,23 @@ const SignIn = () => {
         <TextInput
           label="Email Address"
           placeholder="Enter your email address"
-          // value={email}
-          // handelChange={(e) => setEmail(e.target.value)}
+          value={email}
+          handelChange={(e) => setEmail(e.target.value)}
         />
         <TextInput
           label="Password"
           placeholder="Enter your password"
           password
-          // value={password}
-          // handelChange={(e) => setPassword(e.target.value)}
+          value={password}
+          handelChange={(e) => setPassword(e.target.value)}
         />
 
         <TextButton>Forgot Password?</TextButton>
         <Button
           text="Sign In"
-          // onClick={handelSignIn}
-          // isLoading={buttonLoading}
-          // isDisabled={buttonDisabled}
+          onClick={handelSignIn}
+          isLoading={buttonLoading}
+          isDisabled={buttonDisabled}
         />
       </div>
     </Container>

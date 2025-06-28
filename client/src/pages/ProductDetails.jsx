@@ -1,8 +1,19 @@
-import { Rating } from '@mui/material';
-import { FavoriteBorder, FavoriteRounded } from "@mui/icons-material";
-import React from 'react'
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import Button from "../components/Button";
+import { Rating } from '@mui/material';
+import { FavoriteBorder, FavoriteRounded } from "@mui/icons-material";
+import CircularProgress from '@mui/material/CircularProgress';
+import { useNavigate, useParams } from "react-router-dom";
+import { openSnackbar } from "../redux/reducers/snackbarSlice";
+import { useDispatch } from "react-redux";
+import {
+  addToCart,
+  addToFavourite,
+  deleteFromFavourite,
+  getFavourite,
+  getProductDetails,
+} from "../api/index.js";
 
 const Container = styled.div`
   display: flex;
@@ -116,44 +127,165 @@ const ButtonWrapper = styled.div`
 `;
 
 const ProductDetails = () => {
+  const { id } = useParams();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [product, setProduct] = useState();
+  const [selected, setSelected] = useState();
+  const [favorite, setFavorite] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [cartLoading, setCartLoading] = useState(false);
+
+  const getProduct = async () => {
+    setLoading(true);
+    await getProductDetails(id).then((res) => {
+      setProduct(res.data);
+      setLoading(false);
+    });
+  };
+
+  const addFavorite = async () => {
+    setFavoriteLoading(true);
+    const token = localStorage.getItem("krist-app-token");
+    await addToFavourite(token, { productID: product?._id })
+      .then((res) => {
+        setFavorite(true);
+        setFavoriteLoading(false);
+      })
+      .catch((err) => {
+        setFavoriteLoading(false);
+        dispatch(
+          openSnackbar({
+            message: err.message,
+            severity: "error",
+          })
+        );
+      });
+  };
+  const removeFavorite = async () => {
+    setFavoriteLoading(true);
+    const token = localStorage.getItem("krist-app-token");
+    await deleteFromFavourite(token, { productID: product?._id })
+      .then((res) => {
+        setFavorite(false);
+        setFavoriteLoading(false);
+      })
+      .catch((err) => {
+        setFavoriteLoading(false);
+        dispatch(
+          openSnackbar({
+            message: err.message,
+            severity: "error",
+          })
+        );
+      });
+  };
+  const addCart = async () => {
+    setCartLoading(true);
+    const token = localStorage.getItem("krist-app-token");
+    await addToCart(token, { productId: product?._id, quantity: 1 })
+      .then((res) => {
+        setCartLoading(false);
+        navigate("/cart");
+      })
+      .catch((err) => {
+        setCartLoading(false);
+        dispatch(
+          openSnackbar({
+            message: err.message,
+            severity: "error",
+          })
+        );
+      });
+  };
+  const checkFavourite = async () => {
+    setFavoriteLoading(true);
+    const token = localStorage.getItem("krist-app-token");
+    await getFavourite(token, { productId: product?._id })
+      .then((res) => {
+        const isFavorite = res.data?.some(
+          (favorite) => favorite._id === product?._id
+        );
+        setFavorite(isFavorite);
+        setFavoriteLoading(false);
+      })
+      .catch((err) => {
+        setFavoriteLoading(false);
+        dispatch(
+          openSnackbar({
+            message: err.message,
+            severity: "error",
+          })
+        );
+      });
+  };
+
+  useEffect(() => {
+    getProduct();
+    checkFavourite();
+  }, []);
+
   return (
     <Container>
+      {loading ? (
+        <CircularProgress />
+      ) : (
         <Wrapper>
-            <ImageWrapper>
-                <Image src="https://encrypted-tbn0.gstatic.com/shopping?q=tbn:ANd9GcTwoY5NKSHPrShLzeB1FYR7BozFTlM6RevNL8sqzGRklUf2QB7d6j52VpHBe8_MSf7vJpwwJ9Hr-Q9h8_7liBdXlcc6GPUSCwYr6M4TH-t5" />
-            </ImageWrapper>
-            <Details>
-                <div>
-                    <Title>Product Title</Title>
-                    <Name>Name</Name>
-                </div>
-                <Rating value={4.5} />
-                <Price>
-                  $120  <Span>$200</Span>
-                  <Percent>40% off</Percent>
-                </Price>
-                <Desc>Product Decs</Desc>
-                <Sizes>
-                        <Items>
-                            <Item selected>S</Item>
-                            <Item>M</Item>
-                            <Item>L</Item>
-                            <Item>XL</Item>
-                        </Items>
-                </Sizes>
-                <ButtonWrapper>
-                    <Button text="Add to cart" full outlined />
-                    <Button text="Buy Now" full />
-                    <Button leftIcon={
-                  
+          <ImageWrapper>
+            <Image src={product?.img} />
+          </ImageWrapper>
+          <Details>
+            <div>
+              <Title>{product?.title}</Title>
+              <Name>{product?.name}</Name>
+            </div>
+            <Rating value={3.5} />
+            <Price>
+              ${product?.price?.org} <Span>${product?.price?.mrp}</Span>{" "}
+              <Percent> (${product?.price?.off}% Off) </Percent>
+            </Price>
+            <Desc>{product?.desc}</Desc>
+            <Sizes>
+              <Items>
+                {product?.sizes.map((size) => (
+                  <Item
+                    selected={selected === size}
+                    onClick={() => setSelected(size)}
+                  >
+                    {size}
+                  </Item>
+                ))}
+              </Items>
+            </Sizes>
+            <ButtonWrapper>
+              <Button
+                text="Add to Cart"
+                full
+                outlined
+                isLoading={cartLoading}
+                onClick={() => addCart()}
+              />
+              <Button text="Buy Now" full />
+              <Button
+                leftIcon={
+                  favorite ? (
                     <FavoriteRounded sx={{ fontSize: "22px", color: "red" }} />
-                  
-                } full outlined />
-                </ButtonWrapper>
-            </Details>
+                  ) : (
+                    <FavoriteBorder sx={{ fontSize: "22px" }} />
+                  )
+                }
+                full
+                outlined
+                isLoading={favoriteLoading}
+                onClick={() => (favorite ? removeFavorite() : addFavorite())}
+              />
+            </ButtonWrapper>
+          </Details>
         </Wrapper>
+      )}
     </Container>
-  )
-}
+  );
+};
 
 export default ProductDetails;

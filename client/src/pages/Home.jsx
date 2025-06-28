@@ -4,6 +4,8 @@ import HeaderImage from "../utils/Images/Header.png"
 import { category } from "../utils/data";
 import ProductCategoryCard from "../components/Cards/ProductCategoryCard";
 import ProductCard from "../components/Cards/ProductCard";
+import { getAllProducts } from "../api";
+
 
 const Container = styled.div`
   padding: 20px 30px;
@@ -52,32 +54,46 @@ const CardWrapper = styled.div`
 `;
 
 const Home = () => {
+  const [loading, setLoading] = useState(false);
+  const [products, setProducts] = useState([]);
+
+  const getProducts = async () => {
+    setLoading(true);
+    await getAllProducts().then((res) => {
+      setProducts(res.data);
+      setLoading(false);
+    });
+  };
+
+  useEffect(() => {
+    getProducts();
+  }, []);
+
   return (
     <Container>
-        <Section style={{
-            alignItems: 'center',
-          }}
-          >
-          <Img src={HeaderImage}/>
-        </Section>
-        <Section>
-          <Title>Shop by Categories</Title>
-          <CardWrapper>
-            {category.map((category) => (
-              <ProductCategoryCard category={category} />
-            ))}
-          </CardWrapper>
-        </Section>
-        <Section>
-          <Title center>Our Bestseller</Title>
-          <CardWrapper>
-            <ProductCard />
-            <ProductCard />
-            <ProductCard />
-            <ProductCard />
-          
+      <Section
+        style={{
+          alignItems: "center",
+        }}
+      >
+        <Img src={HeaderImage} />
+      </Section>
+      <Section>
+        <Title>Shop by Categories</Title>
+        <CardWrapper>
+          {category.map((category) => (
+            <ProductCategoryCard category={category} />
+          ))}
         </CardWrapper>
-        </Section>
+      </Section>
+      <Section>
+        <Title center>Our Bestseller</Title>
+        <CardWrapper>
+          {products.map((product) => (
+            <ProductCard product={product} />
+          ))}
+        </CardWrapper>
+      </Section>
     </Container>
   );
 };
